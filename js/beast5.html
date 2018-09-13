@@ -1,0 +1,109 @@
+<script src="../simpletest.js"></script>
+<script>
+  //Interesting cases:
+    //Object.getPrototypeOf('') === String.prototype;//true
+    //String.prototype.isPrototypeOf('');//false
+
+    //Object.getPrototypeOf(0) === Number.prototype;//true
+    //Number.prototype.isPrototypeOf(0);//false
+
+    //Object.getPrototypeOf(false) === Boolean.prototype;//true
+    //Boolean.prototype.isPrototypeOf(false);//false
+
+    //Object.getPrototypeOf(function () {}) === Function.prototype;//true
+    //Function.prototype.isPrototypeOf(thing);//true
+    
+    //https://www.ecma-international.org/ecma-262/6.0/#sec-object.getprototypeof
+    //Object.getPrototypeOf(O): Let obj be ToObject(O).
+    
+  function isPrototypeOf(protoObj, testObj) {
+    if (protoObj === undefined) {
+      throw new TypeError('Cannot read property \'isPrototypeOf\' of undefined');
+    } else if (protoObj === null) {
+      throw new TypeError('Cannot read property \'isPrototypeOf\' of null');
+    }
+
+    //recursion
+    //typeof testObj === "string" || "number" || "boolean" || "symbol" will be excluded.
+    //typeof null ==> "object". So I need the 2nd part in if statement to exclude null.
+    if ((typeof testObj === "object" || typeof testObj === "function") && Object.prototype.toString.call(testObj) !== "[object Null]") {
+      var chain = Object.getPrototypeOf(testObj);
+
+      if (chain === protoObj) {
+        return true;
+      } else {
+        return isPrototypeOf(protoObj, chain);
+      }
+    }
+
+    //not recursion
+    // if ((typeof testObj === "object" || typeof testObj === "function") && Object.prototype.toString.call(testObj) !== "[object Null]") {
+    //   var chain = Object.getPrototypeOf(testObj);
+
+    //   while (chain !== null) {
+    //     if (chain === protoObj) {
+    //       return true;
+    //     }
+
+    //     chain = Object.getPrototypeOf(chain);
+    //   }
+    // }
+    
+    return false;
+  }
+  
+  var canine = {
+    bark: function () {
+      console.log('bark');
+    }
+  };
+
+  var dog = Object.create(canine);
+
+  dog.fetch = function () {
+    console.log('fetch');
+  }
+
+  var myDog = Object.create(dog);
+  var empty = Object.create(null);
+
+  tests({
+    'It should return true if protoObj is in the prototype chain of testObj.': function () {
+      eq(isPrototypeOf(dog, myDog), true);
+    },
+    'It should return false if protoObj is not in the prototype chain of testObj.': function () {
+      eq(isPrototypeOf(dog, empty), false);
+    },
+    'It should work for Object.prototype.': function () {
+      eq(isPrototypeOf(Object.prototype, myDog), true);
+    },
+    'It should work for any number of prototype links.': function () {
+      eq(isPrototypeOf(canine, myDog), true);
+    },
+    'It should throw a TypeError if protoObj is undefined or null.': function () {
+      var isTypeError = false;
+
+      try {
+        isPrototypeOf(null, empty);
+      } catch(e) {
+        isTypeError = (e instanceof TypeError);
+      }
+      eq(isTypeError, true);
+    },
+    'It should return false when checking prototype for null or undefined.': function () {
+      eq(isPrototypeOf(canine, null), false);
+      eq(isPrototypeOf(canine, undefined), false);
+    },
+    'It should return false if ECMAScript language types are not objects.': function () {
+      eq(isPrototypeOf(String.prototype, ''), false);
+      eq(isPrototypeOf(Boolean.prototype, true), false);
+      eq(isPrototypeOf(Number.prototype, 1), false);
+      eq(isPrototypeOf(Symbol.prototype, Symbol()), false);
+    },
+    'It should return true if ECMAScript language types are objects.': function () {
+      eq(isPrototypeOf(Object.prototype, {}), true);
+      eq(isPrototypeOf(Array.prototype, []), true);
+      eq(isPrototypeOf(Function.prototype, function () {}), true);
+    }
+  });
+</script>
